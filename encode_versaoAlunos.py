@@ -44,7 +44,12 @@ def main():
     dataMono=np.array([(data1[i]+data2[i])/2 for i in range(len(data1))])
     time_array=np.linspace(0,len(dataMono)/fs,len(dataMono))
     carrier=myFn(14e3,time_array)
-    yAudioNormalizado=normaliza(dataMono)  
+
+    # Sem filtro
+    sd.play(dataMono, fs)
+    sd.wait()
+
+    originalNormalizado=normaliza(dataMono)
     
     nyq_rate = fs/2
     width = 5.0/nyq_rate
@@ -52,19 +57,60 @@ def main():
     N , beta = scipy.signal.kaiserord(ripple_db, width)
     cutoff_hz = 2200.0
     taps = scipy.signal.firwin(N, cutoff_hz/nyq_rate, window=('kaiser', beta))
-   
-    yFiltrado = scipy.signal.lfilter(taps, 1.0, yAudioNormalizado)
-    dataFiltrado=np.array([(yFiltrado[i]*carrier[i] + carrier[i]) for i in range(len(yFiltrado))])
+    yFiltrado = scipy.signal.lfilter(taps, 1.0, dataMono)
 
-
-    
-    print(dataFiltrado.shape)
+    # Com filtro
     sd.play(yFiltrado, fs)
     sd.wait()
+
+    dataModulado=np.array([(yFiltrado[i]*carrier[i] + carrier[i]) for i in range(len(yFiltrado))])
+    yAudioNormalizado=normaliza(dataModulado)
     
+
+    # Normalizado
+    sd.play(yAudioNormalizado, fs )
+    sd.wait()
+
+    sf.write('audioModulado.wav', yAudioNormalizado, fs)
+
+    # Gráficos
+
+    # Gráfico do sinal original normalizado
+    plt.figure(1)
+    plt.title("Sinal original normalizado")
+    plt.plot(time_array[::500],originalNormalizado[::500])
+    plt.xlabel("Tempo (s)")
+    plt.ylabel("Amplitude")
+    plt.show()
+
+    # Gráfico do sinal filtrado
+    plt.figure(2)
+    plt.title("Sinal filtrado")
+    plt.plot(time_array[::500],yFiltrado[::500])
+    plt.xlabel("Tempo (s)")
+    plt.ylabel("Amplitude")
+    plt.show()
+
+    # Gráfico do sinal filtrado fourrier
     signal=signalMeu()
     signal.plotFFT(yFiltrado, fs)
     plt.axis([0, 17000, 0, 13000])
+    plt.show()
+
+
+    # Gráfico do sinal modulado
+    plt.figure(4)
+    plt.title("Sinal modulado")
+    plt.plot(time_array[::500],dataModulado[::500])
+    plt.xlabel("Tempo (s)")
+    plt.ylabel("Amplitude")
+    plt.show()
+
+    # Gráfico do sinal modulado fourrier
+    signal.plotFFT(dataModulado, fs)
+    plt.axis([0, 17000, 0, 13000])
+    plt.show()
+
 
     # aguarda fim do audio
     sd.wait()

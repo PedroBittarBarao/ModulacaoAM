@@ -4,14 +4,27 @@ from suaBibSignal import *
 import peakutils    #alternativas  #from detect_peaks import *   #import pickle
 import numpy as np
 import sounddevice as sd
+import soundfile as sf
 import matplotlib.pyplot as plt
 import time
+from math import pi, sin
+import scipy
+
 
 
 #funcao para transformas intensidade acustica em dB, caso queira usar
 def todB(s):
     sdB = 10*np.log10(s)
     return(sdB)
+
+def build_senoide(freq,time_array):
+    A=1
+    return A*sin(2*pi*freq*time_array)
+
+def normaliza(s):
+    return s/np.max(np.abs(s))
+
+myFn = np.vectorize(build_senoide, excluded=['freq'])
 
 
 def main():
@@ -25,8 +38,8 @@ def main():
     #voce importou a bilioteca sounddevice como, por exemplo, sd. entao
     # os seguintes parametros devem ser setados:
     sd.default.samplerate = 48000 #taxa de amostragem
-    sd.default.channels = 1 #numCanais # o numero de canais, tipicamente são 2. Placas com dois canais. Se ocorrer problemas pode tentar com 1. No caso de 2 canais, ao gravar um audio, terá duas listas
-    duration =  5 # #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic
+    sd.default.channels = 2 #numCanais # o numero de canais, tipicamente são 2. Placas com dois canais. Se ocorrer problemas pode tentar com 1. No caso de 2 canais, ao gravar um audio, terá duas listas
+    duration =  1 # #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic
     
     #calcule o numero de amostras "numAmostras" que serao feitas (numero de aquisicoes) durante a gracação. Para esse cálculo você deverá utilizar a taxa de amostragem e o tempo de gravação
     numAmostras = sd.default.samplerate * duration
@@ -40,51 +53,41 @@ def main():
     print('A captura foi inicializada')
 
     #para gravar, utilize
-    audio = sd.rec(int(numAmostras), sd.default.samplerate, channels=1)
+    audio = sf.read('audioModulado.wav')
     sd.wait()
     print("...     FIM")
 
 
     #analise sua variavel "audio". pode ser um vetor com 1 ou 2 colunas, lista, isso dependerá so seu sistema, drivers etc...
     #extraia a parte que interessa da gravação (as amostras) gravando em uma variável "dados". Isso porque a variável audio pode conter dois canais e outas informações). 
-    print(audio.shape)
-    dados = audio[:,0]
-    
+    dados = audio[0]
+
     # use a funcao linspace e crie o vetor tempo. Um instante correspondente a cada amostra!
     tempo = np.linspace(0, duration, numAmostras)
-  
-    # plot do áudio gravado (dados) vs tempo! Não plote todos os pontos, pois verá apenas uma mancha (freq altas) .
-    # para isso, plote apenas um ponto a cada 1000 pontos.
-    plt.figure()
-    plt.plot(tempo[::1000], dados[::1000])
+
+    # Fourrier
+    signal.plotFFT(dados, sd.default.samplerate)
+    plt.axis([0, 17000, 0, 13000])
     plt.show()
-     
-       
-    ## Calcule e plote o Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
-    xf, yf = signal.calcFFT(dados, 48000)
-    signal.plotFFT(dados, 48000)
-    plt.axis([0, 1500, 0, 17000])
-    plt.show()
-    
-    #agora, voce tem os picos da transformada, que te informam quais sao as frequencias mais presentes no sinal. Alguns dos picos devem ser correspondentes às frequencias do DTMF!
-    #Para descobrir a tecla pressionada, voce deve extrair os picos e compara-los à tabela DTMF
-    #Provavelmente, se tudo deu certo, 2 picos serao PRÓXIMOS aos valores da tabela. Os demais serão picos de ruídos.
 
-    # para extrair os picos, voce deve utilizar a funcao peakutils.indexes(,,)
-    # Essa funcao possui como argumentos dois parâmetros importantes: "thres" e "min_dist".
-    # "thres" determina a sensibilidade da funcao, ou seja, quao elevado tem que ser o valor do pico para de fato ser considerado um pico
-    #"min_dist" é relatico tolerancia. Ele determina quao próximos 2 picos identificados podem estar, ou seja, se a funcao indentificar um pico na posicao 200, por exemplo, só identificara outro a partir do 200+min_dis. Isso evita que varios picos sejam identificados em torno do 200, uma vez que todos sejam provavelmente resultado de pequenas variações de uma unica frequencia a ser identificada.   
-    # Comece com os valores:
-    index = peakutils.indexes(yf, thres=0.35, min_dist=50)
-    print("index de picos {}" .format(index)) #yf é o resultado da transformada de fourier
+    # Demodulação
+    # Criação do sinal senoidal
+    carrier=myFn(14e3,tempo)
+    dadoModulado = dados*carrier
 
-    #printe os picos encontrados! 
-    print(f'Picos encontrados :{[xf[i] for i in index]}')
-    # Aqui você deverá tomar o seguinte cuidado: A funcao  peakutils.indexes retorna as POSICOES dos picos. Não os valores das frequências onde ocorrem! Pense a respeito
-    
-    #encontre na tabela duas frequencias proximas às frequencias de pico encontradas e descubra qual foi a tecla
-    
+    # filtro passa baixa
+    nyq_rate = sd.default.samplerate/2
+    width = 5.0/nyq_rate
+    ripple_db = 60.0 #dB
+    N , beta = scipy.signal.kaiserord(ripple_db, width)
+    cutoff_hz = 2200.0
+    taps = scipy.signal.firwin(N, cutoff_hz/nyq_rate, window=('kaiser', beta))
+    yFiltrado = scipy.signal.lfilter(taps, 1.0, dadoModulado)
 
+    sd.play(yFiltrado, sd.default.samplerate)
+    sd.wait()
+
+    # Plot
       
     ## Exiba gráficos do fourier do som gravados 
     plt.show()
