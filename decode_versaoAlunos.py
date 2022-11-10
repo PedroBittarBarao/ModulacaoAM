@@ -25,7 +25,7 @@ def main():
     #voce importou a bilioteca sounddevice como, por exemplo, sd. entao
     # os seguintes parametros devem ser setados:
     sd.default.samplerate = 48000 #taxa de amostragem
-    sd.default.channels = 2 #numCanais # o numero de canais, tipicamente são 2. Placas com dois canais. Se ocorrer problemas pode tentar com 1. No caso de 2 canais, ao gravar um audio, terá duas listas
+    sd.default.channels = 1 #numCanais # o numero de canais, tipicamente são 2. Placas com dois canais. Se ocorrer problemas pode tentar com 1. No caso de 2 canais, ao gravar um audio, terá duas listas
     duration =  5 # #tempo em segundos que ira aquisitar o sinal acustico captado pelo mic
     
     #calcule o numero de amostras "numAmostras" que serao feitas (numero de aquisicoes) durante a gracação. Para esse cálculo você deverá utilizar a taxa de amostragem e o tempo de gravação
@@ -63,7 +63,7 @@ def main():
     ## Calcule e plote o Fourier do sinal audio. como saida tem-se a amplitude e as frequencias
     xf, yf = signal.calcFFT(dados, 48000)
     signal.plotFFT(dados, 48000)
-    plt.axis([0, 1500, 0, 13000])
+    plt.axis([0, 1500, 0, 17000])
     plt.show()
     
     #agora, voce tem os picos da transformada, que te informam quais sao as frequencias mais presentes no sinal. Alguns dos picos devem ser correspondentes às frequencias do DTMF!
@@ -83,51 +83,7 @@ def main():
     # Aqui você deverá tomar o seguinte cuidado: A funcao  peakutils.indexes retorna as POSICOES dos picos. Não os valores das frequências onde ocorrem! Pense a respeito
     
     #encontre na tabela duas frequencias proximas às frequencias de pico encontradas e descubra qual foi a tecla
-    freq = [xf[i] for i in index]
-    freq1 = list(filter(lambda x: x < 1200, freq))
-    freq2 = list(filter(lambda x: x > 1200 and x < 1700, freq))
-
-    val_1 = (1e10,0)
-    val_2 = (1e10,0)
-
-    for el in freq1:
-        opt1 = abs(el - 697)
-        opt2 = abs(el - 770)
-        opt3 = abs(el - 852)
-        opt4 = abs(el - 941)
-        opts = {opt1: 697, opt2: 770, opt3: 852, opt4: 941}
-        mini = min([opt1, opt2, opt3, opt4])
-        if mini < val_1[0]:
-            val_1 = (mini, opts[mini])
-
-    for el in freq2:
-        opt1 = abs(el - 1209)
-        opt2 = abs(el - 1336)
-        opt3 = abs(el - 1477)
-        opt4 = abs(el - 1633)
-        opts = {opt1: 1209, opt2: 1336, opt3: 1477, opt4: 1633}
-        mini = min(opts.keys())
-        if mini < val_2[0]:
-            val_2 = (mini, opts[mini])
-
-    #print o valor tecla!!!
-    print(f'{val_1[1]}Hz ;{val_2[1]}Hz')
-    freqs_achadas=(val_1[1], val_2[1])
     
-    freqs={ '1':(697,1209),'2':(697,1336),'3':(697,1477),'A':(697,1633),
-        '4':(770,1209),'5':(770,1336),'6':(770,1477),'B':(770,1633),
-        '7':(852,1209),'8':(852,1336),'9':(852,1477),'C':(852,1633),
-        'X':(941,1209),'0':(941,1336),'#':(941,1477),'D':(941,1633)}
-    
-    for k in freqs.keys():
-        if freqs_achadas==freqs[k]:
-            print(f'Tecla {k} foi pressionada')
-            break
-    
-    
-    #Se acertou, parabens! Voce construiu um sistema DTMF
-
-    #Você pode tentar também identificar a tecla de um telefone real! Basta gravar o som emitido pelo seu celular ao pressionar uma tecla. 
 
       
     ## Exiba gráficos do fourier do som gravados 
