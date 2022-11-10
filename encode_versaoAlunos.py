@@ -38,7 +38,7 @@ myFn = np.vectorize(build_senoide, excluded=['freq'])
 
 
 def main():
-    data, fs = sf.read('Sample_0007.wav')
+    data, fs = sf.read('TacoBell.wav')
     data1=data[:,0]
     data2=data[:,1]
     dataMono=np.array([(data1[i]+data2[i])/2 for i in range(len(data1))])
@@ -64,14 +64,14 @@ def main():
     sd.wait()
 
     dataModulado=np.array([(yFiltrado[i]*carrier[i] + carrier[i]) for i in range(len(yFiltrado))])
-    yAudioNormalizado=normaliza(dataModulado)
+    yModuladoNormalizado=normaliza(dataModulado)
     
 
     # Normalizado
-    sd.play(yAudioNormalizado, fs )
+    sd.play(yModuladoNormalizado, fs)
     sd.wait()
 
-    sf.write('audioModulado.wav', yAudioNormalizado, fs)
+    sf.write('audioModulado.wav', yModuladoNormalizado, fs)
 
     # Gráficos
 
@@ -94,7 +94,7 @@ def main():
     # Gráfico do sinal filtrado fourrier
     signal=signalMeu()
     signal.plotFFT(yFiltrado, fs)
-    plt.axis([0, 17000, 0, 13000])
+    plt.axis([0, 4000, 0, 4000])
     plt.show()
 
 
